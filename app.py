@@ -40,6 +40,11 @@ class Session(db.Model):
 with app.app_context():
     db.create_all()
 
+@app.route('/customer<int:id', methods=['GET'])
+def get_customer(id):
+    customer = Customer.query.get_or_404(id)
+    return customer_schema.jsonify(customer)
+
 @app.route('/customers', methods=['POST'])
 def add_customer():
     customer_data = customer_schema.load(request.json)
@@ -49,6 +54,7 @@ def add_customer():
         new_customer = Customer(name = customer_data['name'], email = customer_data['email'], age = customer_data['age'])
         db.session.add(new_customer)
         db.session.commit()
+        return jsonify({'message':'customer added'}), 201
     except:
         pass
     finally:
