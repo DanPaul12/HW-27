@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from marshmallow import fields
@@ -9,6 +9,18 @@ app.config['SQLALCHEMY_DATABASE_URI']= 'mysql+mysqlconnector://root:thegoblet2@l
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
+class CustomerSchema(ma.Schema):
+    name = fields.String(required=True)
+    email = fields.String(required=True)
+    age = fields.String(required=True)
+
+class SessionSchema(ma.Schema):
+    name = fields.String(required=True)
+    email = fields.String(required=True)
+    age = fields.String(required=True)
+
+customer_schema = CustomerSchema()
+customers_schema = CustomerSchema(many=True)
 
 class Customer(db.Model):
     __tablename__ = 'Customers'
@@ -23,10 +35,24 @@ class Session(db.Model):
     date = db.Column(db.String(255), nullable = False)
     time = db.Column(db.String(255))
     activity = db.Column(db.String(255))
-    customer_id = db.Column(db.String(255), db.ForeignKey('Customers.id'))
+    customer_id = db.Column(db.Integer, db.ForeignKey('Customers.id'))
 
 with app.app_context():
     db.create_all()
+
+@app.route('/customers', methods=['POST'])
+def add_customer():
+    customer_data = customer_schema.load(request.json)
+    if customer_data is None:
+        return jsonify({'message':"no member"}), 404
+    try:
+        new_customer = Customer(name = customer_data['name'], email = customer_data['email'], age = customer_data['age'])
+        db.session.add(new_customer)
+        db.session.commit()
+    except:
+        pass
+    finally:
+        pass
 
 if __name__ == '__main__':
     app.run(debug=True)
