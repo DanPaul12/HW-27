@@ -14,13 +14,18 @@ class CustomerSchema(ma.Schema):
     email = fields.String(required=True)
     age = fields.String(required=True)
 
-class SessionSchema(ma.Schema):
-    name = fields.String(required=True)
-    email = fields.String(required=True)
-    age = fields.String(required=True)
-
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
+
+class SessionSchema(ma.Schema):
+    date = fields.String(required=True)
+    time = fields.String(required=True)
+    activity = fields.String(required=True)
+    customer_id = fields.Integer(required=True)
+
+session_schema = SessionSchema()
+sessions_schema = SessionSchema(many=True)
+
 
 class Customer(db.Model):
     __tablename__ = 'Customers'
@@ -39,6 +44,8 @@ class Session(db.Model):
 
 with app.app_context():
     db.create_all()
+
+#-----------------------------------------------------------------------------
 
 @app.route('/customer<int:id>', methods=['GET'])
 def get_customer(id):
@@ -62,9 +69,9 @@ def add_customer():
 
 @app.route('/customer<int:id>', methods=['PUT'])
 def update_customer(id):
-    customer_data = Customer.query.get_or_404(id)
+    customer = Customer.query.get_or_404(id)
     try:
-        customer = customer_schema.load(request.json)
+        customer_data = customer_schema.load(request.json)
     except ValidationError as err:
         return jsonify(err.messages), 400
     customer.name = customer_data['name']
@@ -72,7 +79,6 @@ def update_customer(id):
     customer.age = customer_data['age']
     db.session.commit()
     return jsonify({"message":'details updated successfully'}), 200
-
 
 
 @app.route('/customer<int:id>', methods=['DELETE'])
@@ -86,6 +92,43 @@ def delete_customer(id):
         pass
     finally:
         pass
+
+ #-----------------------------------------------------------------------------
+
+@app.route('/sessions', methods=['POST'])
+def add_session():
+    try:
+        session_data = session_schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({'message':'data not found'}), 400
+
+    session = Session(date = session_data['date'], time = session_data['time'], activity = session_data['activity'], customer_id = session_data['customer_id'])
+    db.session.add(session)
+    db.session.commit()
+    return jsonify({'message':'session added'}), 200
+
+@app.route('/sessions<int:id>', methods=['GET'])
+def get_session(id):
+    session = Session.query.get_or_404(id)
+    return session_schema.jsonify(session)
+
+@app.route('/sessions<int:id>', methods=['PUT'])
+def update_session(id):
+    session_data = session_schema.load(request.json)
+    session = Session.query.get_or_404(id)
+    session.date = session_data['date']
+    session.time = session_data['time']
+    session.activity = session_data['activity']
+    session.customer_id = session_data['customer_id']
+    db.session.commit()
+    return jsonify({"message":'details updated successfully'}), 200
+
+@app.route('/sessions<int:id>', methods=['PUT'])
+def delete_session(id):
+    session = Session.query.get_or_404(id)
+    db.session.delete(session)
+    db.session.commit()
+    return jsonify({'message': 'session deleted'})
 
 if __name__ == '__main__':
     app.run(debug=True)
